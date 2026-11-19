@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#213943">
+<title>Assistant – Portrait interactif de l’Économie</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color:#23343d;background:#eef1f3}
+*{box-sizing:border-box}html{width:100%;height:100%}body{margin:0;padding:0;width:100%;min-height:100%}
+button,textarea{font:inherit}button{cursor:pointer}
+.shell{width:100%;max-width:470px;height:100vh;height:100dvh;max-height:850px;margin:auto;display:flex;flex-direction:column;background:white;overflow:hidden;box-shadow:0 8px 28px rgba(29,52,60,.13)}
+.head{background:#213943;color:#fff;display:flex;align-items:center;gap:12px;padding:14px 16px;flex-shrink:0}
+.drop{display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#f0e222;color:#23343d;border-radius:10px;font-size:21px;flex-shrink:0}
+.head-title{flex:1;min-width:0}.head strong{display:block;font-size:14px;line-height:1.4}.head small{display:block;margin-top:3px;font-size:11px;color:#cfe1e4}
+.reset{background:transparent;color:#e7eeee;border:1px solid #6c848b;padding:7px 10px;border-radius:7px;font-size:12px;flex-shrink:0}
+.messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:18px 15px;background:#f4f7f8;display:flex;flex-direction:column;gap:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.msg{max-width:93%;padding:12px 13px;border-radius:13px;font-size:13px;line-height:1.58;white-space:pre-wrap;overflow-wrap:anywhere}
+.bot{align-self:flex-start;background:#fff;border:1px solid #dce5e9;border-top-left-radius:3px}.user{align-self:flex-end;background:#f0e222;color:#1e2c34;border-top-right-radius:3px}
+.quick{display:flex;flex-wrap:wrap;gap:7px;padding:10px 12px;border-top:1px solid #e8ecee;background:#fff;flex-shrink:0;max-height:108px;overflow-y:auto}
+.quick button{border:1px solid #cddce2;border-radius:17px;background:#fff;color:#244050;padding:8px 11px;font-size:11px;font-weight:500;white-space:nowrap}.quick button:hover{background:#f5f0c5;border-color:#e8d92a}
+.entry{display:flex;align-items:flex-end;gap:8px;padding:10px;border-top:1px solid #e4eaed;background:#fff;flex-shrink:0}
+.entry textarea{flex:1;min-width:0;resize:none;min-height:44px;max-height:110px;padding:12px;border:1px solid #ccd7da;border-radius:9px;font-size:14px;line-height:1.4;outline:none}.entry textarea:focus{border-color:#849da6}
+.entry button{border:none;background:#f0e222;color:#1b262b;border-radius:9px;min-height:44px;padding:0 14px;font-size:13px;font-weight:bold;flex-shrink:0}.entry button:hover{background:#e2d619}
+.disclaimer{flex-shrink:0;background:#fff;color:#657983;text-align:center;font-size:10px;padding:0 10px 8px}.disclaimer a{color:#244050}
+@media(min-width:601px){body{padding:8px}.shell{border-radius:13px;height:calc(100vh - 16px);height:calc(100dvh - 16px)}}
+@media(max-width:600px){html,body{width:100%;height:100%;overflow:hidden}.shell{width:100%;max-width:none;height:100vh;height:100dvh;max-height:none;min-height:0;margin:0;border-radius:0;box-shadow:none}.head{padding:12px 13px;gap:10px}.messages{padding:13px 11px;gap:10px}.msg{max-width:92%;font-size:13px;padding:10px 11px}.quick{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none;padding:9px 10px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}.quick button{flex:0 0 auto}.entry{padding:9px 10px}}
+@media(max-width:390px){.head{padding:10px;gap:8px}.drop{width:34px;height:34px;font-size:18px}.head strong{font-size:12px}.head small{font-size:10px}.reset{padding:6px 8px;font-size:11px}.msg{font-size:12.5px}.entry textarea{font-size:16px}.entry button{padding:0 11px}}
+@media(max-height:480px){.head{padding-top:8px;padding-bottom:8px}.drop{width:32px;height:32px}.messages{padding:9px 11px}.quick{padding:6px 10px}.entry{padding:6px 10px}}
+@media(max-width:600px){.head{padding-top:max(12px,env(safe-area-inset-top))}.entry{padding-bottom:max(10px,env(safe-area-inset-bottom))}}
+button:focus-visible,textarea:focus-visible{outline:2px solid #213943;outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="shell" aria-label="Assistant du Portrait de l’Économie">
+<header class="head"><span class="drop" aria-hidden="true">🏢</span><div class="head-title"><strong>Assistant du Portrait de l’Économie</strong><small>Aide à la navigation et à l’utilisation du portrait</small></div><button class="reset" id="reset" type="button">Effacer</button></header>
+<section id="messages" class="messages" role="log" aria-live="polite" aria-label="Conversation"></section>
+<nav id="quick" class="quick" aria-label="Questions rapides"></nav>
+<form class="entry" id="form"><textarea id="question" rows="1" maxlength="600" required aria-label="Posez votre question" placeholder="Posez votre question…"></textarea><button type="submit">Envoyer</button></form>
+<div class="disclaimer">Assistant de navigation · <a href="https://geoportaileconomie-audrso.hub.arcgis.com/" target="_blank" rel="noopener noreferrer">Ouvrir le portrait économique</a></div>
+</main>
+<script>
+'use strict';
+const FAQ=[
+  {
+    "title": "Présentation du portrait",
+    "keys": [
+      "bonjour",
+      "salut",
+      "aide",
+      "presentation",
+      "objectif",
+      "portrait",
+      "utilisation",
+      "economique",
+      "economie"
+    ],
+    "answer": "Bienvenue dans le Portrait interactif de l’Économie de L’Agence du Pays de Saint-Omer ! Pour le moment, seul l’onglet « Zones d’activités économiques » est accessible ; les autres onglets sont en cours de construction. Je peux vous aider à utiliser les filtres « ZAE » et « Commune », à consulter les informations d’une zone, à télécharger sa fiche PDF ou à comprendre la légende située à droite de la carte."
+  },
+  {
+    "title": "Utiliser les filtres",
+    "keys": [
+      "filtre",
+      "filtres",
+      "filtrer",
+      "filtrage",
+      "selection",
+      "selectionner",
+      "utiliser les filtres",
+      "rechercher",
+      "choisir"
+    ],
+    "answer": "Dans l’onglet « Zones d’activités économiques », utilisez les deux filtres disponibles : « ZAE » (zone d’activités économiques) et « Commune ».\n\n1. Ouvrez l’onglet « Zones d’activités économiques ».\n2. Choisissez une zone dans le filtre « ZAE » ou une commune dans le filtre « Commune ».\n3. Observez la carte et cliquez sur la zone recherchée pour afficher ses informations.\n4. Effacez votre sélection pour revenir à une vue plus générale.\n\nLes filtres servent à cibler les zones : il n’y a pas de panneau de couches à cocher à gauche."
+  },
+  {
+    "title": "Filtre ZAE",
+    "keys": [
+      "zae",
+      "zone activite",
+      "zone d activites",
+      "nom zone",
+      "trouver une zae"
+    ],
+    "answer": "Le filtre « ZAE » permet de rechercher ou de sélectionner une zone d’activités économiques. Choisissez la ZAE souhaitée dans le filtre, puis cliquez sur la zone correspondante sur la carte pour consulter sa fiche d’information et accéder au document PDF lorsqu’il est proposé."
+  },
+  {
+    "title": "Filtre Commune",
+    "keys": [
+      "commune",
+      "communes",
+      "ville",
+      "territoire communal"
+    ],
+    "answer": "Le filtre « Commune » permet de consulter les zones d’activités économiques en fonction d’une commune. Sélectionnez la commune souhaitée, puis cliquez sur une zone affichée pour ouvrir ses informations. Pour changer de commune, modifiez ou effacez la sélection."
+  },
+  {
+    "title": "Table attributaire",
+    "keys": [
+      "consulter une zae",
+      "consulter une zone",
+      "cliquer",
+      "clic",
+      "zone",
+      "polygone",
+      "fiche",
+      "attributaire",
+      "attribut",
+      "information",
+      "informations",
+      "details",
+      "pop up",
+      "popup",
+      "table attributaire",
+      "table"
+    ],
+    "answer": "Pour consulter les informations attributaires d’une zone d’activités économiques :\n1. Ouvrez l’onglet « Zones d’activités économiques ».\n2. Utilisez si besoin les filtres « ZAE » et « Commune ».\n3. Cliquez sur une zone d’activités directement sur la carte.\n4. La fenêtre qui s’ouvre présente les informations de la zone. Elle contient également une fiche PDF à télécharger : cliquez sur le lien de téléchargement pour l’obtenir.\n\nLes informations attributaires s’affichent directement après un clic sur la zone."
+  },
+  {
+    "title": "Lire la légende",
+    "keys": [
+      "legende",
+      "légende",
+      "couleur",
+      "couleurs",
+      "symbole",
+      "symboles",
+      "a droite",
+      "signification",
+      "representation"
+    ],
+    "answer": "La légende se situe à droite de la carte des zones d’activités économiques. Elle permet de comprendre la signification des couleurs et des symboles utilisés. Il suffit de la consulter pour interpréter la représentation des zones sur la carte."
+  },
+  {
+    "title": "Couches et affichage",
+    "keys": [
+      "couche",
+      "couches",
+      "cocher",
+      "decocher",
+      "activer",
+      "desactiver",
+      "masquer",
+      "afficher les couches",
+      "panneau couches",
+      "couche a gauche"
+    ],
+    "answer": "Dans ce portrait économique, il n’y a pas de bouton « Couches » à gauche pour cocher ou décocher les données. Pour explorer les zones d’activités, utilisez les filtres « ZAE » et « Commune ». La légende est affichée à droite de la carte."
+  },
+  {
+    "title": "Onglets en construction",
+    "keys": [
+      "onglet",
+      "onglets",
+      "construction",
+      "bientot",
+      "indisponible",
+      "autre theme",
+      "autres themes",
+      "non disponible",
+      "pas accessible"
+    ],
+    "answer": "Actuellement, seul l’onglet « Zones d’activités économiques » est ouvert à la consultation. Les autres onglets du Portrait interactif de l’Économie sont en cours de construction ; leurs contenus et leurs fonctionnalités ne sont pas encore disponibles."
+  },
+  {
+    "title": "Naviguer dans la carte",
+    "keys": [
+      "zoom",
+      "zoomer",
+      "dezoom",
+      "deplacer",
+      "navigation",
+      "recentrer",
+      "carte",
+      "molette"
+    ],
+    "answer": "Pour explorer la carte, utilisez la molette de la souris ou les commandes de zoom disponibles, puis faites glisser la carte pour vous déplacer. Sur téléphone, utilisez les gestes tactiles. Cliquez sur une zone d’activités pour ouvrir sa fiche."
+  },
+  {
+    "title": "Réinitialiser les filtres",
+    "keys": [
+      "reinitialiser",
+      "effacer filtre",
+      "supprimer filtre",
+      "annuler filtre",
+      "tout afficher",
+      "revenir",
+      "remettre a zero"
+    ],
+    "answer": "Pour retrouver la vue générale, effacez les choix dans les filtres « ZAE » et « Commune ». Vous pouvez ensuite choisir une nouvelle zone ou une autre commune."
+  },
+  {
+    "title": "Problème d’affichage",
+    "keys": [
+      "erreur",
+      "bug",
+      "vide",
+      "blanc",
+      "chargement",
+      "probleme",
+      "ne fonctionne pas",
+      "impossible",
+      "lent",
+      "pdf ne marche pas"
+    ],
+    "answer": "Si la carte ne s’affiche pas correctement, commencez par effacer les filtres « ZAE » et « Commune », puis actualisez la page et vérifiez votre connexion. Si une fiche PDF ne s’ouvre pas, vérifiez les téléchargements du navigateur ou essayez d’ouvrir le lien dans un nouvel onglet. Si le problème persiste, signalez à L’Agence la zone concernée et le message d’erreur."
+  },
+  {
+    "title": "Utilisation sur mobile",
+    "keys": [
+      "mobile",
+      "telephone",
+      "smartphone",
+      "tablette",
+      "tactile"
+    ],
+    "answer": "Sur mobile, ouvrez le portrait et accédez à l’onglet « Zones d’activités économiques ». Utilisez les filtres « ZAE » ou « Commune », puis touchez une zone sur la carte pour afficher sa fiche et le lien PDF. La légende reste l’élément à consulter pour comprendre les symboles de la carte ; sa présentation peut varier selon la taille de l’écran."
+  },
+  {
+    "title": "Contacter l’Agence",
+    "keys": [
+      "contact",
+      "contacter",
+      "agence",
+      "mail",
+      "email",
+      "signaler"
+    ],
+    "answer": "Pour toute question sur les données des zones d’activités économiques ou pour signaler un problème, consultez le site de L’Agence du Pays de Saint-Omer : https://www.aud-stomer.fr/."
+  }
+];
+const quick=["Utiliser les filtres", "Table attributaire", "Lire la légende"];
+const messages=document.getElementById('messages'),quickNav=document.getElementById('quick'),input=document.getElementById('question');
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function addMessage(s,kind){const div=document.createElement('div');div.className='msg '+kind;div.textContent=s;messages.appendChild(div);messages.scrollTop=messages.scrollHeight}
+function respond(q){
+ const s=norm(q),words=s.split(' ');
+ if(/(pdf|telecharg|export)/.test(s))return FAQ.find(e=>e.title==='Table attributaire').answer;
+ if(/(onglet|construction|indisponible)/.test(s))return FAQ.find(e=>e.title==='Onglets en construction').answer;
+ if(/(couche|cocher|decocher|activer|desactiver)/.test(s))return FAQ.find(e=>e.title==='Couches et affichage').answer;
+ if(/(filtr|selection)/.test(s) && /commune/.test(s))return FAQ.find(e=>e.title==='Filtre Commune').answer;
+ if(/(filtr|selection)/.test(s) && /zae|zone/.test(s))return FAQ.find(e=>e.title==='Filtre ZAE').answer;
+ let best=null,max=0;
+ for(const e of FAQ){let score=0,t=norm(e.title);
+  if(s===t)score+=40;else if(s.includes(t)&&t.length>7)score+=12;
+  for(const k0 of e.keys){const k=norm(k0);
+   if(s===k)score+=30;
+   else if(k.includes(' ')&&s.includes(k))score+=14+k.length/10;
+   else if(words.includes(k))score+=k.length>=5?5:3;
+   else if(k.length>=7&&s.includes(k))score+=3;
+  }
+  if(score>max){best=e;max=score}
+ }
+ return max>=3?best.answer:'Je peux vous guider dans l’onglet « Zones d’activités économiques » : utiliser les filtres ZAE et Commune, consulter les informations d’une zone en cliquant dessus, télécharger la fiche PDF ou lire la légende à droite. Les autres onglets sont en cours de construction.';
+}
+function ask(q){q=q.trim();if(!q)return;addMessage(q,'user');addMessage(respond(q),'bot')}
+for(const q of quick){const b=document.createElement('button');b.type='button';b.textContent=q;b.addEventListener('click',()=>ask(q));quickNav.appendChild(b)}
+document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();const q=input.value;input.value='';input.style.height='auto';ask(q);input.focus()});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('form').requestSubmit()}});
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,110)+'px'});
+function intro(){addMessage('Bonjour 👋 Je suis l’assistant du Portrait interactif de l’Économie de L’Agence.\n\nL’onglet « Zones d’activités économiques » est accessible ; les autres onglets sont en cours de construction. Je peux vous aider avec les filtres ZAE et Commune, les informations d’une zone, le téléchargement de sa fiche PDF et la légende à droite.\n\nComment puis-je vous aider ?','bot')}
+document.getElementById('reset').addEventListener('click',()=>{messages.replaceChildren();input.value='';intro();input.focus()});
+intro();
+</script>
+</body>
+</html>
